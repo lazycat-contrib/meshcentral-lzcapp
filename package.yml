@@ -1,6 +1,6 @@
 package: community.lazycat.app.meshcentral
 name: MeshCentral
-version: 0.0.0
+version: 1.3.1
 description: "Remote device management: monitor and control your own computers from a web console."
 min_os_version: "1.5.0"
 homepage: https://meshcentral.com/
