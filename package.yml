@@ -1,0 +1,18 @@
+package: community.lazycat.app.meshcentral
+name: MeshCentral
+version: 0.0.0
+description: "Remote device management: monitor and control your own computers from a web console."
+min_os_version: "1.5.0"
+homepage: https://meshcentral.com/
+author: Ylian Saint-Hilaire
+license: Apache-2.0
+permissions:
+  required:
+    - net.internet
+locales:
+  zh:
+    name: MeshCentral
+    description: "远程设备管理：在网页控制台里监控和操作自己的电脑。"
+  en:
+    name: MeshCentral
+    description: "Remote device management: monitor and control your own computers from a web console."

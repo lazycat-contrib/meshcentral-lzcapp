@@ -1,0 +1,68 @@
+application:
+  subdomain: meshcentral
+  multi_instance: false
+  # MeshCentral has its own account system and an admin console, so it is
+  # exposed directly rather than behind the platform login gate.
+  public_path:
+    - /
+  upstreams:
+    - location: /package-licenses/
+      backend: file:///lzcapp/pkg/content/licenses/
+    - location: /
+      # The service listens on 443 and, with tlsOffload set, expects plain HTTP
+      # because the ingress terminates TLS.
+      backend: http://meshcentral:443/
+
+services:
+  meshcentral:
+    # upstream: ghcr.io/ylianst/meshcentral:1.3.1
+    image: ghcr.1ms.run/ylianst/meshcentral:1.3.1
+    environment:
+      # Public hostname: used for generated links and the agent download paths.
+      - HOSTNAME={{ .S.AppDomain }}
+      # The only way to get the first account: registration is off by default.
+      - ALLOW_NEW_ACCOUNTS=true
+      # TLS ends at the ingress, so tell MeshCentral it is behind a proxy that
+      # terminates it. This does not change the listening port, which stays 443.
+      - TLS_OFFLOAD={{ .S.AppDomain }}
+      # Without this the container keeps the placeholder session key shipped in
+      # its config template; regenerating makes it a random 96-char value.
+      - REGEN_SESSIONKEY=true
+      - TZ=Asia/Shanghai
+    binds:
+      # configuration, certificates and the account database
+      - /lzcapp/var/meshcentral-data:/opt/meshcentral/meshcentral-data
+      # files transferred to and from managed devices
+      - /lzcapp/var/meshcentral-files:/opt/meshcentral/meshcentral-files
+
+usage: |
+  MeshCentral 是一套网页版远程设备管理平台。装好之后，把它的代理程序（MeshAgent）装到自己其他电脑上，就能在一个控制台里看到这些机器的状态——在线情况、硬件信息、屏幕画面，也能远程桌面、传文件、跑命令。
+
+  使用方法：
+  1. 打开应用会进入登录页。**第一次用先点「Create Account」自己注册一个管理员账号**
+     （默认自助注册是关的，本包已为你打开）。
+  2. 登录后到「My Devices → Add Device」里拿到安装命令（或直接下载对应平台的
+     MeshAgent），到你要管理的那台电脑上执行/安装。
+  3. 设备上线后就会出现在设备列表里，点进去可以用远程桌面、文件传输、命令行。
+  4. 建议建好账号后，到后台把自助注册关掉，避免陌生人注册。
+
+  数据与安全：
+  - 配置、证书、账号库都在 /lzcapp/var/meshcentral-data，设备间传输的文件在
+    /lzcapp/var/meshcentral-files，卸载会一并删除，请定期备份。
+  - **没有内置默认口令**：管理员账号由你自己注册。
+  - 镜像自带的配置模板里有一串公开的会话密钥占位值，本包已启用自动重新生成
+    （每次部署随机），不会沿用模板里的默认值。
+  - 应用直接对外开放，由 MeshCentral 自己的登录页鉴权：
+    自带账号体系的服务再套一层平台鉴权会造成重复登录，所以用 public_path。
+
+  说明：
+  - **能管理什么，取决于设备能不能连到它**：本应用不挂宿主机的 Docker 守护进程、
+    也不开特权，所以它管不了懒猫宿主机本身、也管不了其他容器。
+    它管理的是**你自己另外安装并连接过来的设备**（比如局域网里的电脑、
+    有公网地址的服务器）。
+  - 单容器，内置数据存储；没有额外数据库。
+  - TLS 由懒猫入口负责，容器内是明文，已相应配置（tlsOffload），
+    不需要也不应该让容器自己再申请证书。
+  - 未配置邮件与短信，账号找回、双因素验证需要你自己再接邮件服务。
+  - 未做真机验证：注册账号、添加设备上线、远程桌面以及重启后数据留存
+    均未在设备上实测。
